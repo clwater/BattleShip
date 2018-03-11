@@ -1,92 +1,37 @@
 package com.clwater.battleship;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-/**
- * Created by yszsyf on 2018/3/7.
- */
 
 public class SocketTest {
-
-    private static final int PORT = 9999;
-    private List<Socket> mList = new ArrayList<Socket>();
-    private ServerSocket server = null;
-    private ExecutorService mExecutorService = null;
-    private String receiveMsg;
-    private String sendMsg;
-
-    public static void main(String[] args) {
-        new SocketTest();
-    }
-
-    public SocketTest() {
-        try {
-            server = new ServerSocket(PORT);
-            mExecutorService = Executors.newCachedThreadPool();
-            System.out.println("服务器已启动...");
-            Socket client = null;
-            while (true) {
-                client = server.accept();
-                mList.add(client);
-                mExecutorService.execute(new Service(client));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    class Service implements Runnable {
-        private Socket socket;
-        private BufferedReader in = null;
-        private PrintWriter printWriter=null;
-
-        public Service(Socket socket) {
-            this.socket = socket;
-            try {
-                printWriter = new PrintWriter(new BufferedWriter(new OutputStreamWriter( socket.getOutputStream(), "UTF-8")), true);
-                in = new BufferedReader(new InputStreamReader(
-                        socket.getInputStream(),"UTF-8"));
-                printWriter.println("成功连接服务器"+"（服务器发送）");
-                System.out.println("成功连接服务器");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
+    public void client() throws IOException {
+        //客户端
+//1、创建客户端Socket，指定服务器地址和端口
+        Socket socket =new Socket("192.168.199.184",10086);
+//2、获取输出流，向服务器端发送信息
+        OutputStream outputStream  = socket.getOutputStream();//字节输出流
+        PrintWriter pw =new PrintWriter(outputStream);//将输出流包装成打印流
+        pw.write("用户名：admin；密码：123");
+        pw.flush();
+        socket.shutdownOutput();
+//3、获取输入流，并读取服务器端的响应信息
+        InputStream inputStream = socket.getInputStream();
+        BufferedReader bufferedReader  = new BufferedReader(new InputStreamReader(inputStream));
+        String info = null;
+        while((info=bufferedReader.readLine())!=null){
+            System.out.println("我是客户端，服务器说："+info);
         }
 
-        @Override
-        public void run() {
-            try {
-                while (true) {
-                    if ((receiveMsg = in.readLine())!=null) {
-                        System.out.println("receiveMsg:"+receiveMsg);
-                        if (receiveMsg.equals("0")) {
-                            System.out.println("客户端请求断开连接");
-                            printWriter.println("服务端断开连接"+"（服务器发送）");
-                            mList.remove(socket);
-                            in.close();
-                            socket.close();
-                            break;
-                        } else {
-                            sendMsg = "我已接收：" + receiveMsg + "（服务器发送）";
-                            printWriter.println(sendMsg);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+//4、关闭资源
+        bufferedReader.close();
+        inputStream.close();
+        pw.close();
+        outputStream.close();
+        socket.close();
     }
 }
